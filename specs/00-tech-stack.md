@@ -808,11 +808,49 @@ Upgrade validation must include:
 
 Major-version upgrades require explicit review.
 
-## 38. Approved Baseline Stack
+## 38. Web Client Stack
+
+The supported browser client is:
+
+    Next.js 16.3.x Active LTS
+    React 19.3
+    TypeScript 5.x
+    Node.js 24 LTS
+    pnpm
+
+Use:
+
+- Next.js App Router
+- Server Components by default
+- Client Components only for browser interaction
+- Route Handlers as a thin Backend-for-Frontend
+- OpenAPI-generated TypeScript contracts
+- openapi-fetch or native fetch for typed service calls
+- CSS Modules / modern CSS
+- Vitest + React Testing Library
+- Playwright for end-to-end tests
+- SSE/Fetch streaming for AI responses
+
+Do not introduce Redux or another global client-state framework by default.
+
+Do not store access or refresh tokens in localStorage, sessionStorage, or IndexedDB.
+
+Next.js Route Handlers must remain transport/session adapters rather than a second business API implementation.
+
+The full client architecture is defined in:
+
+    specs/00-client.md
+
+## 39. Approved Baseline Stack
 
 | Area | Technology |
 |---|---|
-| Language | Python 3.13 |
+| Backend language | Python 3.13 |
+| Client runtime | Node.js 24 LTS |
+| Client framework | Next.js 16.3.x Active LTS |
+| Client UI runtime | React 19.3 |
+| Client language | TypeScript 5.x |
+| Client package manager | pnpm |
 | Package manager | uv |
 | API framework | FastAPI 0.142.x |
 | ASGI server | Uvicorn |
@@ -843,12 +881,12 @@ Major-version upgrades require explicit review.
 | Local infrastructure | Docker Compose |
 | CI/CD | GitHub Actions |
 
-## 39. Phase-to-Stack Matrix
+## 40. Phase-to-Stack Matrix
 
 | Phase | New Stack Elements |
 |---|---|
-| 1 | FastAPI, Pydantic, SQLAlchemy, PostgreSQL, Alembic, pytest |
-| 2 | Argon2id, JWT/JWS, JWKS, HTTPX service integration |
+| 1 | FastAPI, Pydantic, SQLAlchemy, PostgreSQL, Alembic, pytest; custom web client intentionally not required |
+| 2 | Argon2id, JWT/JWS, JWKS, HTTPX service integration; introduce Next.js web client |
 | 3 | LangChain integrations, pgvector, LLM and embeddings |
 | 4 | Ragas, OpenTelemetry, Prometheus/Grafana, trace backend |
 | 5 | LangGraph |
@@ -860,7 +898,7 @@ Major-version upgrades require explicit review.
 
 A phase must not import future-stack components unless an explicit dependency requires them.
 
-## 40. Technology Rejection Rules
+## 41. Technology Rejection Rules
 
 Do not add technology because:
 
@@ -880,7 +918,7 @@ Add technology only when justified by:
 - operational requirement
 - explicit learning objective
 
-## 41. Official References
+## 42. Official References
 
 Periodically validate technology decisions against official documentation:
 
@@ -894,7 +932,7 @@ Periodically validate technology decisions against official documentation:
 - MCP Python SDK: https://py.sdk.modelcontextprotocol.io/
 - OWASP GenAI Security Project: https://genai.owasp.org/
 
-## 42. Definition of Done
+## 43. Definition of Done
 
 The technology stack is correctly applied when:
 

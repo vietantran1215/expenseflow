@@ -1073,7 +1073,44 @@ Before accepting an architecture change, ask:
 
 If the last question has no answer, the component probably does not belong in the current phase.
 
-## 40. Definition of Done
+## 40. Web Client Boundary
+
+The supported browser client is a Next.js web application under:
+
+    apps/web/
+
+It is a presentation layer plus a thin Backend-for-Frontend boundary.
+
+Browser flow:
+
+    Browser
+      |
+      | same-origin request
+      v
+    Next.js Web + Route Handlers
+      |
+      +--> Auth Service
+      +--> Core API
+      +--> AI Service
+
+Client rules:
+
+- browser JavaScript must not store bearer or refresh tokens in persistent browser storage
+- Route Handlers may hold HttpOnly cookie session credentials and forward bearer identity server-side
+- Next.js must not duplicate Core business rules
+- frontend role checks are user-experience controls only, never authorization
+- Core and AI Services remain independently protected
+- generated OpenAPI contracts should be used to reduce API-type drift
+- AI output is untrusted and must be rendered safely
+- consequential agent writes require explicit client confirmation as specified in Phase 10
+
+The web client is optional in Phase 1 to preserve the minimum-code learning objective and becomes a first-class deployable application from Phase 2.
+
+Detailed client rules are defined in:
+
+    specs/00-client.md
+
+## 41. Definition of Done
 
 This architecture is correctly followed when ExpenseFlow can evolve through all ten phases without replacing its fundamental ownership model:
 
