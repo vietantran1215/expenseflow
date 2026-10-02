@@ -338,3 +338,44 @@ Phase 3 is complete when the system can reliably demonstrate the basic RAG chain
     answer with verifiable citations
 
 The learner should be able to inspect every step rather than treating RAG as one opaque library call.
+
+## Front-end Specification
+
+### Goal
+
+Add a focused policy-question experience that makes retrieval evidence visible.
+
+### Required route
+
+    /assistant/policy
+
+### Required UI
+
+- policy question input
+- submit/cancel state
+- answer panel
+- structured citation list
+- citation detail showing document title, version, region/policy metadata when returned
+- explicit no-answer/insufficient-evidence state
+- request ID on errors for debugging
+
+Do not build a general chatbot in this phase.
+
+### Rendering rules
+
+- model text is untrusted
+- raw HTML is disabled
+- citations come from structured response fields
+- do not parse model prose to invent citation links
+- external links use an allowlisted safe protocol
+
+### Front-end acceptance criteria
+
+FE-01. An authenticated user can ask a policy question from the browser.
+
+FE-02. Every returned citation can be inspected independently from the generated prose.
+
+FE-03. Insufficient evidence is visibly different from a successful grounded answer.
+
+FE-04. The UI cannot approve, edit, submit, or reimburse a claim through AI.
+
