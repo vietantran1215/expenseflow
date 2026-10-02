@@ -522,3 +522,63 @@ The required security invariant is:
     outcome is audited
 
 The model is part of the decision workflow, never the final security boundary.
+
+## Front-end Specification
+
+### Goal
+
+Make human control, runtime policy decisions, and bounded agent termination explicit in the browser.
+
+### Required action UX
+
+For every consequential proposed action, display:
+
+- action name in user language
+- target resource
+- important arguments/effect
+- whether confirmation is required
+- expiration/invalid state if the proposal can no longer execute
+- confirm and cancel controls with no dark-pattern default
+
+The browser must never auto-confirm because:
+
+- the model said the user approved
+- a previous message contained "yes"
+- a tool result requested confirmation
+- a hidden HTML element changed state
+
+### Required runtime states
+
+The assistant UI must handle:
+
+- tool denied by policy
+- confirmation required
+- confirmation expired
+- user cancelled
+- execution succeeded
+- execution failed
+- maximum steps exceeded
+- timeout/deadline exceeded
+- budget exceeded
+- runtime terminated
+
+Do not automatically restart terminated agent execution.
+
+### Trust presentation
+
+- generated recommendations are visually distinguishable from authoritative Core state
+- authoritative claim status comes from Core/API structured data
+- uncertainty and citations remain visible
+- no UI wording may imply approval/reimbursement unless authoritative business state says so
+
+### Front-end acceptance criteria
+
+FE-01. submit_expense_claim requires a live backend-recognized confirmation proposal.
+
+FE-02. Confirmation cannot be replayed after expiry or successful use.
+
+FE-03. Policy denial is displayed as denial rather than retried until success.
+
+FE-04. Agent termination/budget states end the browser workflow deterministically.
+
+FE-05. Approve, reject, reimburse, shell execution, dynamic tool installation, and agent spawning have no browser action surface.
