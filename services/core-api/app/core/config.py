@@ -7,7 +7,6 @@ class Settings(BaseSettings):
     database_url: str = (
         "postgresql+asyncpg://expenseflow:expenseflow@localhost:5432/expenseflow"
     )
-    app_env: str = "development"
     log_level: str = "INFO"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
