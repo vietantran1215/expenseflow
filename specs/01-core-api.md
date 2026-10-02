@@ -396,3 +396,53 @@ Phase 1 is done when the repository contains a small Core API that proves the le
     PostgreSQL persistence
 
 The implementation should be intentionally boring and small. Complexity is introduced only when a later phase has a concrete reason for it.
+
+## Front-end Specification
+
+### Goal
+
+Introduce the smallest usable React client for the Core API without hiding HTTP or business-state behavior from the learner.
+
+### Required routes
+
+    /claims
+    /claims/new
+    /claims/:claimId
+
+### Required UI
+
+- claim list with status filter and pagination controls
+- create-claim form with dynamic expense items
+- claim detail page
+- edit DRAFT claim
+- submit DRAFT claim
+- approve/reject SUBMITTED claim
+- reimburse APPROVED claim
+- visible server-calculated total
+- loading, empty, validation, and error states
+
+Because authentication does not exist yet, provide a clearly labeled development-only actor panel for temporary employee_id, manager_id, and conceptual role inputs.
+
+The actor panel must not survive Phase 2.
+
+### State rules
+
+- fetch server state through the typed API client
+- do not reproduce the claim transition state machine as an authorization mechanism
+- UI may hide impossible actions for usability, but Core API remains authoritative
+- refresh/invalidate affected claim queries after mutations
+
+### Front-end acceptance criteria
+
+FE-01. A learner can create and inspect a claim without Postman.
+
+FE-02. A claim with multiple items displays the total returned by the server.
+
+FE-03. Workflow actions display backend validation failures rather than predicting success locally.
+
+FE-04. Refreshing the page preserves business data because state comes from the API/database.
+
+FE-05. No authentication/session code exists yet.
+
+FE-06. The application builds through Rsbuild/Rspack and TypeScript strict mode.
+
