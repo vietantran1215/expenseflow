@@ -19,7 +19,7 @@ def expect_post_validation_error(api: ApiClient, payload: dict[str, object]) -> 
 
 def payload_case(
     name: str,
-    mutate: callable,
+    mutate: Callable[[dict[str, object]], None],
 ) -> Case:
     def run(api: ApiClient) -> None:
         payload = make_claim_payload()
