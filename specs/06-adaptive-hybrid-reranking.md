@@ -327,3 +327,43 @@ Phase 6 is complete when the team can answer:
 > Which retrieval strategy is best for this class of expense-policy question, and what measured evidence supports that choice?
 
 The output is not merely more retrieval components. It is a retrieval system whose strategy is explicit, measurable, and replaceable.
+
+## Front-end Specification
+
+### Goal
+
+Keep the normal assistant UX stable while making retrieval strategy changes observable to learners.
+
+### User-facing behavior
+
+The main assistant should not require the user to choose DENSE, LEXICAL, or HYBRID manually.
+
+The system chooses the strategy.
+
+### Development-only retrieval panel
+
+Behind a feature flag, show structured diagnostics such as:
+
+- selected strategy
+- router reason_code
+- dense candidate count
+- lexical candidate count
+- fusion method
+- reranked result count
+- final citation order
+- safe retrieval/reranking scores when exposed
+
+Do not display raw embeddings.
+
+Do not expose implementation details as a production requirement.
+
+### Front-end acceptance criteria
+
+FE-01. Existing assistant flows continue to work without user selection of retrieval strategy.
+
+FE-02. A learner can inspect which strategy was selected for a request.
+
+FE-03. Exact-term and hybrid examples can be demonstrated from the browser.
+
+FE-04. Debug metadata is disabled by default for production users.
+
