@@ -260,7 +260,6 @@ Submitting a claim must update the persisted status transactionally.
 Use environment-based configuration for at least:
 
 - DATABASE_URL
-- APP_ENV
 - LOG_LEVEL
 
 No real secrets committed to Git.
@@ -281,7 +280,6 @@ Minimum errors:
 - CLAIM_NOT_FOUND
 - INVALID_CLAIM_TRANSITION
 - CLAIM_ITEMS_REQUIRED
-- INVALID_EXPENSE_ITEM
 - VALIDATION_ERROR
 
 Do not expose stack traces or raw SQL errors to API clients.
