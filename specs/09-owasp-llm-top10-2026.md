@@ -477,3 +477,42 @@ Phase 9 is complete when the system has a repeatable LLM-security verification l
     regression gate
 
 Security is enforced by application architecture, not by asking the LLM to behave.
+
+## Front-end Specification
+
+### Goal
+
+Harden the browser as an untrusted-output rendering boundary for the Phase-9 LLM security controls.
+
+### Required browser controls
+
+- raw HTML from model output is disabled
+- Markdown is sanitized
+- javascript:, data:, and other unsafe link schemes are rejected
+- model output cannot inject DOM event handlers
+- structured citations/actions are rendered from typed backend fields
+- hidden model/context data is never placed in DOM attributes for convenience
+- security errors use safe generic messages plus request_id
+- client analytics redact or exclude sensitive AI/business payloads
+- AI response size/rendering is bounded to avoid browser resource exhaustion
+
+### Security regression tests
+
+Add browser tests for at least:
+
+- prompt output containing script tags
+- Markdown links using javascript:
+- fake action markup trying to trigger submit
+- oversized/repeated output rendering
+- citation text containing HTML payloads
+- attempts to expose hidden context fields that are not in the public response contract
+
+### Front-end acceptance criteria
+
+FE-01. Untrusted LLM content cannot execute JavaScript through supported renderers.
+
+FE-02. Model prose cannot manufacture a trusted browser action.
+
+FE-03. Sensitive hidden context is absent from browser response models, not merely hidden with CSS.
+
+FE-04. Security rendering regressions run automatically in CI.
