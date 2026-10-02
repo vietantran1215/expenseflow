@@ -37,36 +37,15 @@ def response_claim() -> ExpenseClaimResponse:
     )
 
 
-class StubService:
+class CreateClaimStub:
     def __init__(self, claim: ExpenseClaimResponse) -> None:
         self.claim = claim
 
     async def create(self, _payload: object) -> ExpenseClaimResponse:
         return self.claim
 
-    async def get(self, _claim_id: UUID) -> ExpenseClaimResponse:
-        return self.claim
 
-    async def list(self, **_kwargs: object) -> list[ExpenseClaimResponse]:
-        return [self.claim]
-
-    async def update(self, _claim_id: UUID, _payload: object) -> ExpenseClaimResponse:
-        return self.claim
-
-    async def submit(self, _claim_id: UUID) -> ExpenseClaimResponse:
-        return self.claim
-
-    async def approve(self, _claim_id: UUID) -> ExpenseClaimResponse:
-        return self.claim
-
-    async def reject(self, _claim_id: UUID) -> ExpenseClaimResponse:
-        return self.claim
-
-    async def reimburse(self, _claim_id: UUID) -> ExpenseClaimResponse:
-        return self.claim
-
-
-class MissingClaimService(StubService):
+class MissingClaimStub:
     async def get(self, _claim_id: UUID) -> ExpenseClaimResponse:
         raise ClaimNotFound()
 
@@ -78,7 +57,7 @@ def claim() -> ExpenseClaimResponse:
 
 @pytest.fixture
 async def client(claim: ExpenseClaimResponse) -> AsyncIterator[AsyncClient]:
-    app.dependency_overrides[get_claim_service] = lambda: StubService(claim)
+    app.dependency_overrides[get_claim_service] = lambda: CreateClaimStub(claim)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as test_client:
         yield test_client
@@ -156,7 +135,7 @@ async def test_unknown_request_field_is_rejected(
 
 @pytest.mark.asyncio
 async def test_missing_claim_uses_stable_domain_error(claim: ExpenseClaimResponse) -> None:
-    app.dependency_overrides[get_claim_service] = lambda: MissingClaimService(claim)
+    app.dependency_overrides[get_claim_service] = MissingClaimStub
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as test_client:
         response = await test_client.get(f"/claims/{uuid4()}")
