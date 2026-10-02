@@ -19,24 +19,6 @@ class ApiTestFailure(AssertionError):
     """Raised when an API scenario does not satisfy its expected contract."""
 
 
-@dataclass(frozen=True)
-class Case:
-    name: str
-    run: Callable[["ApiClient"], None]
-
-
-@dataclass
-class SuiteResult:
-    name: str
-    passed: int
-    failed: int
-    failures: list[str]
-
-    @property
-    def ok(self) -> bool:
-        return self.failed == 0
-
-
 class ApiClient:
     def __init__(
         self,
@@ -99,6 +81,24 @@ class ApiClient:
             )
 
         return response
+
+
+@dataclass(frozen=True)
+class Case:
+    name: str
+    run: Callable[[ApiClient], None]
+
+
+@dataclass
+class SuiteResult:
+    name: str
+    passed: int
+    failed: int
+    failures: list[str]
+
+    @property
+    def ok(self) -> bool:
+        return self.failed == 0
 
 
 def assert_equal(actual: object, expected: object, message: str) -> None:
