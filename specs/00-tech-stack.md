@@ -812,30 +812,40 @@ Major-version upgrades require explicit review.
 
 The supported browser client is:
 
-    Next.js 16.3.x Active LTS
-    React 19.3
-    TypeScript 5.x
+    React 19.x
+    TypeScript — strict mode
+    Rsbuild 2.x
+    Rspack 2.x
+    React Router 7.x — Data Mode
     Node.js 24 LTS
     pnpm
 
+Rust-based frontend tooling:
+
+- Rsbuild as the application build system
+- Rspack as the Rust-based bundler
+- built-in SWC path for JSX/TSX transformation
+- Biome for formatting and linting
+- optional Rust React Compiler path only after compatibility tests pass
+
 Use:
 
-- Next.js App Router
-- Server Components by default
-- Client Components only for browser interaction
-- Route Handlers as a thin Backend-for-Frontend
+- React Router for browser routing
+- TanStack Query for non-trivial server state
 - OpenAPI-generated TypeScript contracts
 - openapi-fetch or native fetch for typed service calls
-- CSS Modules / modern CSS
+- React Hook Form for complex forms
+- Zod only where client schema validation adds value
+- modern CSS / CSS Modules
 - Vitest + React Testing Library
-- Playwright for end-to-end tests
-- SSE/Fetch streaming for AI responses
+- Playwright for phase-critical end-to-end tests
+- SSE/fetch streaming for AI responses when introduced
 
 Do not introduce Redux or another global client-state framework by default.
 
 Do not store access or refresh tokens in localStorage, sessionStorage, or IndexedDB.
 
-Next.js Route Handlers must remain transport/session adapters rather than a second business API implementation.
+The production frontend must compile to static assets and must not require a Node.js application server.
 
 The full client architecture is defined in:
 
@@ -846,12 +856,18 @@ The full client architecture is defined in:
 | Area | Technology |
 |---|---|
 | Backend language | Python 3.13 |
-| Client runtime | Node.js 24 LTS |
-| Client framework | Next.js 16.3.x Active LTS |
-| Client UI runtime | React 19.3 |
-| Client language | TypeScript 5.x |
+| Client build runtime | Node.js 24 LTS |
+| Client UI runtime | React 19.x |
+| Client language | TypeScript, strict mode |
+| Client build system | Rsbuild 2.x |
+| Client bundler | Rspack 2.x |
+| Client routing | React Router 7.x, Data Mode |
+| Client server state | TanStack Query |
+| Client format/lint | Biome |
 | Client package manager | pnpm |
-| Package manager | uv |
+| Client component tests | Vitest + React Testing Library |
+| Client E2E tests | Playwright |
+| Backend package manager | uv |
 | API framework | FastAPI 0.142.x |
 | ASGI server | Uvicorn |
 | Validation | Pydantic v2 |
@@ -874,9 +890,9 @@ The full client architecture is defined in:
 | Metrics | Prometheus |
 | Dashboards | Grafana |
 | Traces | Jaeger or Tempo |
-| Tests | pytest |
-| Lint and format | Ruff |
-| Type checking | mypy |
+| Backend tests | pytest |
+| Backend lint and format | Ruff |
+| Backend type checking | mypy |
 | Containers | Docker |
 | Local infrastructure | Docker Compose |
 | CI/CD | GitHub Actions |
@@ -885,16 +901,16 @@ The full client architecture is defined in:
 
 | Phase | New Stack Elements |
 |---|---|
-| 1 | FastAPI, Pydantic, SQLAlchemy, PostgreSQL, Alembic, pytest; custom web client intentionally not required |
-| 2 | Argon2id, JWT/JWS, JWKS, HTTPX service integration; introduce Next.js web client |
-| 3 | LangChain integrations, pgvector, LLM and embeddings |
-| 4 | Ragas, OpenTelemetry, Prometheus/Grafana, trace backend |
-| 5 | LangGraph |
-| 6 | PostgreSQL FTS or optional OpenSearch, RRF, reranker |
-| 7 | MinIO/S3, multimodal model input |
-| 8 | MCP Python SDK v2, Streamable HTTP |
-| 9 | SBOM/security scanners, adversarial LLM security harness |
-| 10 | Agent policy guard and agentic security regression harness |
+| 1 | FastAPI, Pydantic, SQLAlchemy, PostgreSQL, Alembic, pytest; React, TypeScript, Rsbuild/Rspack, React Router, basic typed API client |
+| 2 | Argon2id, JWT/JWS, JWKS, HTTPX service integration; frontend session bootstrap and protected routing |
+| 3 | LangChain integrations, pgvector, LLM and embeddings; policy Q&A and citation UI |
+| 4 | Ragas, OpenTelemetry, Prometheus/Grafana, trace backend; client diagnostics metadata |
+| 5 | LangGraph; streaming assistant and tool/evidence activity UI |
+| 6 | PostgreSQL FTS or optional OpenSearch, RRF, reranker; retrieval debug UI |
+| 7 | MinIO/S3, multimodal model input; receipt upload/preview/analysis UI |
+| 8 | MCP Python SDK v2, Streamable HTTP; agent action proposal and confirmation UX |
+| 9 | SBOM/security scanners, adversarial LLM security harness; output-rendering hardening |
+| 10 | Agent policy guard and agentic security regression harness; confirmation-integrity and termination UX |
 
 A phase must not import future-stack components unless an explicit dependency requires them.
 
