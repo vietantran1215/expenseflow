@@ -1,5 +1,5 @@
 from collections.abc import AsyncIterator
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -22,8 +22,8 @@ def response_claim() -> ExpenseClaimResponse:
         business_purpose="Conference",
         status=ClaimStatus.DRAFT,
         total_amount=Decimal("100.00"),
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
         items=[
             ExpenseItemResponse(
                 id=uuid4(),
