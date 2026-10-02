@@ -384,3 +384,54 @@ Phase 8 is complete when MCP is a production integration boundary rather than a 
     audit + telemetry
 
 The Core API remains the source of truth for expense business logic.
+
+## Front-end Specification
+
+### Goal
+
+Keep MCP transport invisible to ordinary users while exposing safe agent-driven Core actions.
+
+The browser talks to the AI API.
+
+It must not become an MCP client.
+
+### Required assistant delta
+
+Support structured action proposals for:
+
+- create_expense_draft
+- submit_expense_claim
+
+For draft creation:
+
+- show the proposed business purpose and items before/after execution as appropriate
+- show authoritative Core result after execution
+
+For submit:
+
+- show claim identifier
+- show current authoritative status
+- show the exact proposed transition
+- require explicit confirmation before execution
+- allow cancel
+- display the authoritative post-action result
+
+### Confirmation contract
+
+A confirmation UI event must reference a backend-issued proposal/action identifier.
+
+Do not treat a generic chat reply such as "yes" as sufficient browser-side proof of confirmation.
+
+The backend/runtime re-authorizes before execution.
+
+### Front-end acceptance criteria
+
+FE-01. Existing assistant read flows remain unchanged when the internal implementation switches from HTTP tools to MCP.
+
+FE-02. Browser code contains no MCP credential or direct MCP server URL.
+
+FE-03. submit_expense_claim cannot execute from model text alone.
+
+FE-04. Duplicate clicks or retries do not create duplicate consequential writes when backend idempotency is working.
+
+FE-05. Approve, reject, and reimburse remain unavailable as agent actions.
