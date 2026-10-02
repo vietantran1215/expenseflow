@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID, uuid4
@@ -8,6 +8,10 @@ from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
+
+
+def utc_now() -> datetime:
+    return datetime.now(UTC)
 
 
 class ClaimStatus(StrEnum):
@@ -49,7 +53,7 @@ class ExpenseClaim(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
-        onupdate=func.now(),
+        onupdate=utc_now,
     )
 
     items: Mapped[list["ExpenseItem"]] = relationship(
