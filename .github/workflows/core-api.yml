@@ -1,0 +1,66 @@
+name: Core API
+
+on:
+  pull_request:
+    paths:
+      - "services/core-api/**"
+      - "compose.yml"
+      - "infra/postgres/**"
+      - ".github/workflows/core-api.yml"
+  push:
+    branches: [main]
+    paths:
+      - "services/core-api/**"
+      - "compose.yml"
+      - "infra/postgres/**"
+      - ".github/workflows/core-api.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/core-api
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: expenseflow
+          POSTGRES_PASSWORD: expenseflow
+          POSTGRES_DB: expenseflow_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U expenseflow -d expenseflow_test"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://expenseflow:expenseflow@localhost:5432/expenseflow_test
+      TEST_DATABASE_URL: postgresql+asyncpg://expenseflow:expenseflow@localhost:5432/expenseflow_test
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.10.0"
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: uv sync
+      - run: uv run alembic upgrade head
+      - run: uv run ruff check .
+      - run: uv run mypy app
+      - name: Run black-box API scenarios
+        run: |
+          uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/core-api.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          if ! uv run python scripts/api_tests/run_all.py; then
+            echo "===== Core API server log ====="
+            cat /tmp/core-api.log
+            exit 1
+          fi
+      - run: uv run pytest
