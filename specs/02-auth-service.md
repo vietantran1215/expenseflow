@@ -1,4 +1,4 @@
-# Phase 2 — Enterprise Authentication & Authorization Service: FastAPI Level 5
+# Phase 2 — Enterprise Authentication & Authorization Service
 
 ## 1. Purpose
 
