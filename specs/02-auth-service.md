@@ -520,3 +520,49 @@ Phase 2 is complete when ExpenseFlow can prove:
     consequential actions are auditable
 
 A working login page alone does not satisfy this phase.
+
+## Front-end Specification
+
+### Goal
+
+Replace Phase-1 development identity inputs with a real browser authentication and authorization experience.
+
+### Required routes
+
+    /login
+    /claims
+    /claims/new
+    /claims/:claimId
+
+### Required UI behavior
+
+- login form
+- session bootstrap on application load
+- logout
+- authenticated application shell
+- role-aware navigation/actions for EMPLOYEE, MANAGER, and FINANCE
+- clear 401 session-expired behavior
+- clear 403 forbidden behavior
+- no manual employee_id/manager_id actor switcher from Phase 1
+
+### Token/session rules
+
+- access token lives in memory only
+- refresh token remains Secure + HttpOnly + SameSite cookie
+- no bearer or refresh token in localStorage, sessionStorage, IndexedDB, URL, or logs
+- at most one coordinated refresh attempt for concurrent 401 responses
+- failure to refresh returns the user to login
+- route protection is UX only; backend authorization remains authoritative
+
+### Front-end acceptance criteria
+
+FE-01. Login establishes a usable browser session without exposing the refresh token to React code.
+
+FE-02. Browser reload can restore a valid session through the approved refresh flow.
+
+FE-03. EMPLOYEE, MANAGER, and FINANCE users see only relevant actions, while direct API attempts are still enforced by the backend.
+
+FE-04. Expired/revoked credentials end in a deterministic login state rather than a refresh loop.
+
+FE-05. The Phase-1 development actor panel is removed.
+
