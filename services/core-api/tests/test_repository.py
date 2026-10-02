@@ -1,4 +1,5 @@
 import os
+from collections.abc import AsyncIterator
 from datetime import date
 from decimal import Decimal
 from uuid import UUID, uuid4
