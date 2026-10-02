@@ -3,7 +3,8 @@ from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID, uuid4
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, func\nfrom sqlalchemy import Enum as SqlEnum
+from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, func
+from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
