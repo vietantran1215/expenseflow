@@ -1,15 +1,15 @@
 from datetime import date, datetime
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID, uuid4
 
-from sqlalchemy import Date, DateTime, Enum as SqlEnum, ForeignKey, Numeric, String, func
+from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, func\nfrom sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 
 
-class ClaimStatus(str, Enum):
+class ClaimStatus(StrEnum):
     DRAFT = "DRAFT"
     SUBMITTED = "SUBMITTED"
     APPROVED = "APPROVED"
@@ -17,7 +17,7 @@ class ClaimStatus(str, Enum):
     REIMBURSED = "REIMBURSED"
 
 
-class ExpenseCategory(str, Enum):
+class ExpenseCategory(StrEnum):
     TRAVEL = "TRAVEL"
     HOTEL = "HOTEL"
     MEAL = "MEAL"
