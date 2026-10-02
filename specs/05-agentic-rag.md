@@ -334,3 +334,47 @@ Phase 5 is complete when the AI Service can choose the minimum required capabili
     synthesize grounded answer
         ->
     expose observable execution
+
+## Front-end Specification
+
+### Goal
+
+Upgrade the policy Q&A page into a bounded assistant UI that can show which trusted evidence sources were used.
+
+### Required route
+
+    /assistant
+
+### Required UI
+
+- conversational request/response history for the current session
+- streaming answer rendering when supported
+- stop/cancel control
+- structured activity states such as:
+  - searching policy
+  - loading claim
+  - loading claim list
+  - synthesizing answer
+- evidence grouped by source type:
+  - policy evidence
+  - claim evidence
+- clear tool/runtime failure state
+- no raw tool payload dump by default
+
+### Security/identity rules
+
+- bearer token never appears in message history
+- model-visible text cannot manufacture a trusted tool result
+- frontend does not choose tool arguments on behalf of the agent except explicit user inputs
+- current phase has no consequential agent write confirmation because agent tools remain read-oriented
+
+### Front-end acceptance criteria
+
+FE-01. The assistant can display policy-only, claim-only, and combined-evidence answers.
+
+FE-02. The user can cancel an in-flight streamed response.
+
+FE-03. Evidence remains inspectable independently from generated text.
+
+FE-04. Tool failure terminates visibly without an infinite browser retry loop.
+
