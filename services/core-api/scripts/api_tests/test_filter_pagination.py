@@ -26,7 +26,11 @@ def test_employee_filter(api: ApiClient) -> None:
     ).json()
 
     ids = {str(row["id"]) for row in response}
-    assert_equal(ids, {str(first["id"]), str(second["id"])}, "Employee filter returned wrong claims")
+    assert_equal(
+        ids,
+        {str(first["id"]), str(second["id"])},
+        "Employee filter returned wrong claims",
+    )
 
 
 def test_status_filter(api: ApiClient) -> None:
