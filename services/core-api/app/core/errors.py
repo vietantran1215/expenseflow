@@ -24,9 +24,3 @@ class ClaimItemsRequired(DomainError):
     code = "CLAIM_ITEMS_REQUIRED"
     message = "At least one expense item is required before submission"
     status_code = 422
-
-
-class InvalidExpenseItem(DomainError):
-    code = "INVALID_EXPENSE_ITEM"
-    message = "The expense item is invalid"
-    status_code = 422
