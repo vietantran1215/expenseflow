@@ -2,820 +2,529 @@
 
 ## 1. Purpose
 
-This document defines the web client architecture for ExpenseFlow.
+This document defines the browser client architecture for ExpenseFlow across all ten phases.
 
-The client exists to make the ten backend and AI phases usable and demonstrable without turning the project into a frontend curriculum.
+The client exists to make each backend, RAG, agent, MCP, and security phase directly usable without turning the project into a separate frontend curriculum.
 
 The web application is responsible for:
 
-- presentation
-- user interaction
-- browser-session handling
-- calling backend services through a thin Backend-for-Frontend boundary
-- streaming AI responses
-- receipt upload UX
-- citations and evidence presentation
+- presentation and navigation
+- user input and form validation for user experience
+- browser-session bootstrap
+- typed HTTP calls to Auth, Core, and AI APIs
+- AI streaming UX when introduced
+- receipt upload and preview
+- evidence and citation presentation
 - explicit confirmation for consequential agent actions
+- safe rendering of untrusted AI output
+- client-side observability and correlation IDs
 
-The client is **not** responsible for:
+The client is not responsible for:
 
 - expense business rules
 - authorization decisions
-- password validation
+- password policy enforcement
 - claim-state enforcement
-- RAG retrieval logic
-- agent policy
+- RAG retrieval policy
+- agent runtime policy
 - MCP authorization
 - security decisions that backend services must enforce
 
-If this document conflicts with a phase specification, this document is the default client authority unless that phase explicitly records a client architecture change.
+Backend APIs remain authoritative.
 
-## 2. Client Architecture
+## 2. Front-end Technology Decision
 
-Use one web application:
+Use a React + TypeScript single-page application with a Rust-based build and quality toolchain.
 
-    apps/web/
+Baseline:
 
-Technology:
-
-    Next.js 16
-    React 19
+    React 19.x
     TypeScript
+    Rsbuild 2.x
+    Rspack 2.x
+    React Router 7.x — Data Mode
+    pnpm
+    Node.js 24 LTS
 
-The web application uses the Next.js App Router.
+Rust-based tooling:
 
-Browser-facing architecture:
+- Rspack is the bundler used by Rsbuild.
+- Rspack uses Rust for its core build pipeline.
+- Rsbuild provides the project-level configuration and development experience.
+- Rspack's built-in SWC pipeline handles JSX/TSX transformation.
+- Biome is the default formatter and linter.
+- React Compiler may use the Rust implementation supported by the Rspack/Rsbuild toolchain after compatibility tests pass.
+
+Do not add Vite, Webpack, Babel, ESLint, or Prettier by default unless a concrete compatibility requirement appears.
+
+Exact versions are pinned in the frontend lockfile.
+
+## 3. Why a Static React SPA
+
+ExpenseFlow does not need server-side rendering for its product goals.
+
+The supported browser topology is:
 
     Browser
       |
       | same-origin HTTPS
       v
-    Next.js Web Application
+    Static React Application
       |
-      +--> Route Handlers / thin BFF
-              |
-              +--> Auth Service
-              |
-              +--> Core API
-              |
-              +--> AI Service
+      | /api/*
+      v
+    Reverse Proxy / API Entry
+      |
+      +--> Auth Service
+      +--> Core API
+      +--> AI Service
 
-The browser should not directly depend on service topology.
+Local development uses the Rsbuild development-server proxy to preserve the same path model.
 
-If Core API or AI Service URLs change, the browser routes do not need to change.
+Production may serve the generated static assets from:
 
-## 3. Why a Thin BFF
+- the same reverse proxy
+- object storage + CDN
+- another static hosting platform
 
-The web client uses Next.js Route Handlers as a thin Backend-for-Frontend layer.
+The frontend must not depend on a Node.js server at runtime after build.
 
-The BFF exists to:
+## 4. Same-Origin API Contract
 
-- keep access and refresh tokens out of JavaScript-accessible storage
-- reduce browser CORS complexity
-- normalize browser-specific session behavior
-- centralize server-side API client configuration
-- provide same-origin streaming endpoints
-- avoid exposing internal service addresses to the browser
+Browser-visible paths should stay stable:
 
-The BFF must stay thin.
+    /api/auth/*
+    /api/core/*
+    /api/ai/*
 
-It must not reimplement:
-
-- expense workflow rules
-- claim authorization
-- user-role authorization
-- RAG policy
-- agent tool policy
+Internal service addresses remain deployment configuration.
 
 Example:
 
     Browser
       |
-      | POST /api/claims/123/submit
+      | GET /api/core/claims
       v
-    Next Route Handler
+    API Entry / Reverse Proxy
       |
-      | Bearer access token from secure cookie
       v
     Core API
-      |
-      v
-    authorization + business-state validation
 
-If Core rejects the action, the BFF returns the Core result.
+The proxy performs routing, TLS termination, and infrastructure concerns only.
 
-The BFF must not decide that the claim is allowed to submit.
+It must not reimplement application business rules.
 
-## 4. Browser Authentication Model
+## 5. Browser Authentication Model
 
-### Login
+Phase 1 has no authentication.
 
-Flow:
+From Phase 2 onward:
 
-    Browser
-      |
-      | username + password
-      v
-    Next.js /api/auth/login
-      |
-      v
-    Auth Service /auth/login
-      |
-      | access token + refresh token
-      v
-    Next.js server
-      |
-      +--> set HttpOnly access-token cookie
-      |
-      +--> set HttpOnly refresh-token cookie
-      |
-      v
-    Browser session established
+- access token is held in memory only
+- refresh token is stored only in a Secure, HttpOnly, SameSite cookie
+- refresh token is never exposed to React code
+- localStorage, sessionStorage, and IndexedDB must not contain bearer or refresh tokens
+- application reload may bootstrap a new access token using the refresh endpoint
+- refresh/logout endpoints that depend on cookies require CSRF/origin protections
+- Core and AI calls use the in-memory access token in the Authorization header
+- a 401 may trigger at most one coordinated refresh attempt before returning the user to login
 
-Tokens are never returned to client JavaScript.
+The frontend never decides whether a user is authorized.
 
-### Cookie requirements
+Role-aware UI is convenience only.
 
-Authentication cookies must use:
+## 6. Recommended Project Structure
 
-- HttpOnly
-- Secure in deployed environments
-- SameSite=Lax by default
-- narrow Path where practical
-- explicit Max-Age/Expires
-- no Domain widening unless deployment requires it
+    apps/web/
+    ├── src/
+    │   ├── app/
+    │   │   ├── router.tsx
+    │   │   ├── providers.tsx
+    │   │   └── bootstrap.ts
+    │   │
+    │   ├── features/
+    │   │   ├── auth/
+    │   │   ├── claims/
+    │   │   ├── assistant/
+    │   │   ├── receipts/
+    │   │   └── diagnostics/
+    │   │
+    │   ├── shared/
+    │   │   ├── api/
+    │   │   ├── components/
+    │   │   ├── errors/
+    │   │   └── utils/
+    │   │
+    │   ├── generated/
+    │   ├── main.tsx
+    │   └── styles.css
+    │
+    ├── public/
+    ├── index.html
+    ├── rsbuild.config.ts
+    ├── biome.json
+    ├── tsconfig.json
+    └── package.json
 
-Never store access or refresh tokens in:
+Do not create empty future-phase feature folders before the phase introduces them.
 
-- localStorage
-- sessionStorage
-- IndexedDB
-- React state
-- URL parameters
+## 7. Rsbuild Configuration
 
-## 5. Session Refresh
+Minimal baseline:
 
-The Next.js server owns browser token refresh.
+~~~ts
+// apps/web/rsbuild.config.ts
+import { defineConfig } from "@rsbuild/core";
+import { pluginReact } from "@rsbuild/plugin-react";
 
-Flow:
+export default defineConfig({
+  plugins: [
+    // Adds React/TSX integration and Fast Refresh.
+    pluginReact(),
+  ],
 
-    Browser request
-       |
-       v
-    Next server detects expired/near-expired access token
-       |
-       v
-    Auth Service /auth/refresh
-       |
-       v
-    rotated refresh token + new access token
-       |
-       v
-    update HttpOnly cookies
-       |
-       v
-    continue request
+  server: {
+    proxy: {
+      // Keep browser API paths stable while backend services
+      // continue to run on separate local ports.
+      "/api/core": "http://localhost:8000",
+      "/api/auth": "http://localhost:8001",
+      "/api/ai": "http://localhost:8002",
+    },
+  },
+});
+~~~
 
-Refresh-token rotation rules from Phase 2 remain authoritative.
+Proxy paths may be rewritten if backend routes do not include the service prefix.
 
-The client must not weaken replay detection.
+The same external path contract should be reproduced by the production reverse proxy.
 
-## 6. Logout
+## 8. Routing
 
-Browser calls:
+Use React Router 7 in Data Mode.
 
-    POST /api/auth/logout
+Phase routes are introduced only when needed.
 
-Next.js server:
+Target route family:
 
-1. invokes Auth Service logout
-2. clears local authentication cookies
-3. returns a safe response even if cookie cleanup must occur after an upstream failure
+    /
+    /login
+    /claims
+    /claims/new
+    /claims/:claimId
+    /assistant
+    /receipts/:receiptId
+    /diagnostics
 
-Logout-all should call the corresponding Auth Service capability.
+Protected-route behavior is a UX control.
 
-## 7. CSRF and Same-Origin Protection
+Backend authorization remains mandatory.
 
-Because browser authentication uses cookies to the Next.js BFF, all state-changing web endpoints require browser-origin protection.
+## 9. Server State
 
-Minimum controls:
+Use TanStack Query for server state once the application has more than trivial CRUD.
 
-- SameSite cookies
-- verify Origin header for unsafe methods
-- reject unexpected cross-origin mutation requests
-- use CSRF token protection if deployment requirements exceed SameSite + Origin validation
-- do not enable permissive CORS for BFF routes
+Responsibilities:
 
-Backend Core and AI Services continue to authenticate via bearer tokens received server-to-server from the BFF.
+- request lifecycle
+- cache
+- invalidation
+- retry policy
+- mutation state
+- refetching
 
-## 8. API Client Contracts
+Do not use TanStack Query cache as authoritative business state.
 
-Do not hand-maintain duplicate TypeScript API interfaces when FastAPI OpenAPI already defines the contracts.
+Recommended query keys:
 
-Generate TypeScript contracts from service OpenAPI documents.
+    ["claims", filters]
+    ["claim", claimId]
+    ["receipt", receiptId]
+    ["policy-answer", requestId]
+
+Write success must invalidate or update the minimum relevant cache entries.
+
+## 10. Local UI State
+
+Prefer in this order:
+
+1. component state
+2. reducer for complex local transitions
+3. React context for small application-wide UI state
+
+Do not introduce Redux, Zustand, MobX, or another global state library by default.
+
+Add one only if real cross-feature state complexity justifies it.
+
+## 11. API Contracts
+
+Do not hand-maintain duplicate TypeScript representations of FastAPI schemas when OpenAPI is already authoritative.
+
+Generate API types from the service OpenAPI documents.
 
 Recommended:
 
     openapi-typescript
     openapi-fetch
 
-Generated clients should live in a generated directory such as:
+Generated files live under:
 
     apps/web/src/generated/
 
-Do not manually edit generated files.
+Generated code must not contain handwritten business logic.
+
+Example typed client:
+
+~~~ts
+// apps/web/src/shared/api/core-client.ts
+import createClient from "openapi-fetch";
+import type { paths } from "../../generated/core-api";
+
+export const coreClient = createClient<paths>({
+  // Same-origin path. Deployment topology stays outside React code.
+  baseUrl: "/api/core",
+});
+~~~
+
+## 12. Error Model
+
+The frontend should normalize backend errors into one UI-safe shape.
 
 Example:
 
-    Auth OpenAPI
-        |
-        v
-    generate auth types
+~~~ts
+export type ApiError = {
+  code: string;
+  message: string;
+  requestId?: string;
+  fieldErrors?: Record<string, string[]>;
+};
+~~~
 
-    Core OpenAPI
-        |
-        v
-    generate core types
+Do not show:
 
-    AI OpenAPI
-        |
-        v
-    generate ai types
+- stack traces
+- SQL errors
+- internal exception classes
+- tokens
+- prompts
+- internal model context
 
-Contract generation should be automated in development/CI.
+A request ID may be displayed to support debugging.
 
-## 9. Server-Side API Clients
+## 13. Forms
 
-Create one typed server-only client wrapper per backend service:
+Use native HTML validation where useful and schema validation for complex forms.
 
-    src/server/api/auth.ts
-    src/server/api/core.ts
-    src/server/api/ai.ts
+Recommended:
 
-Responsibilities:
+- React Hook Form
+- Zod when a client-side schema adds value
 
-- base URL
-- timeout
-- request ID propagation
-- bearer-token propagation
-- safe error normalization
-- OpenTelemetry propagation
+Client validation improves feedback.
 
-Do not let Client Components import these modules.
+It does not replace Pydantic/backend validation.
 
-Use the Next.js server-only boundary where appropriate.
+Financial calculations such as claim total remain server-authoritative.
 
-## 10. Rendering Model
+## 14. AI Output Rendering
 
-Default to Server Components.
+Treat every LLM output as untrusted content.
 
-Use Client Components only when browser interactivity is required.
+Rules:
 
-### Server Components
+- render text as text by default
+- sanitize Markdown rendering
+- raw HTML is disabled
+- do not execute model-generated JavaScript
+- do not convert model text into hidden browser commands
+- external links require safe protocol validation
+- citations are rendered from structured citation objects, not parsed from arbitrary prose
+- model-generated tool/action descriptions do not execute automatically
 
-Good use cases:
+## 15. Streaming
 
-- claim list
-- claim detail initial render
-- static policy citation display
-- user profile
-- navigation shell
+Streaming is introduced only when the AI phase benefits from it.
 
-### Client Components
-
-Use for:
-
-- forms with immediate interaction
-- AI token streaming
-- receipt upload progress
-- optimistic local UX where justified
-- confirmation dialogs
-- interactive evaluation/debug views if later required
-
-Do not turn the entire application into a client-side SPA without reason.
-
-## 11. Client State
-
-Use the smallest possible state model.
-
-Preferred order:
-
-1. URL/search params
-2. Server Component data
-3. local component state
-4. React context for small cross-cutting UI state
-
-Do not introduce Redux or another global state library by default.
-
-Backend business state must remain backend-owned.
-
-## 12. Routes
-
-Target application routes appear gradually.
-
-### Authentication
-
-    /login
-
-### Expense claims
-
-    /claims
-    /claims/new
-    /claims/[claimId]
-
-### AI assistant
-
-    /assistant
-
-### Receipt analysis
-
-Integrated into:
-
-    /claims/[claimId]
-
-or:
-
-    /claims/[claimId]/receipts/[receiptId]
-
-Do not create a large dashboard/navigation hierarchy unless business requirements justify it.
-
-## 13. Phase 1 Client Scope
-
-No custom web client implementation is required in Phase 1.
-
-Use:
-
-- FastAPI Swagger UI
-- curl/HTTP client
-- automated tests
-
-Reason:
-
-> Phase 1 explicitly optimizes for minimum code while learning Core API fundamentals.
-
-The client architecture begins implementation in Phase 2.
-
-## 14. Phase 2 Client Scope
-
-Introduce:
-
-    apps/web/
-
-Minimum pages:
-
-- Login
-- My Claims list
-- Claim detail
-- Create Draft Claim
-- Submit Claim
-- Manager review controls when role permits
-- Finance reimbursement control when role permits
-
-Important:
-
-UI role checks are presentation only.
-
-Example:
-
-    if role != MANAGER:
-        hide Approve button
-
-This improves UX but is not security.
-
-Core API must still reject unauthorized approval attempts.
-
-## 15. Phase 3 Client Scope
-
-Add:
-
-    /assistant
-
-Minimum UI:
-
-- question input
-- answer
-- citations
-- loading/error state
-
-Do not build conversation history, memory, or a chat-product clone yet.
-
-The objective is to demonstrate RAG.
-
-## 16. Phase 4 Client Scope
-
-No new business UI is required.
-
-Optionally add a development-only diagnostics view, but official evaluation output should remain generated by the evaluation pipeline rather than manually inspected through a dashboard.
-
-## 17. Phase 5 Client Scope
-
-Enhance Assistant to present safe agent execution information.
-
-May display:
-
-- "Searching expense policy"
-- "Reading claim #..."
-- "Combining claim and policy evidence"
-
-Do not display:
-
-- hidden chain-of-thought
-- raw system prompt
-- credentials
-- internal security metadata
-
-Tool execution summaries must be derived from trusted runtime events rather than fabricated model prose.
-
-## 18. Phase 6 Client Scope
-
-No major UI change.
-
-Assistant continues to show answer and citations.
-
-Retrieval strategy is primarily backend behavior.
-
-A development/debug mode may display:
-
-- retrieval strategy
-- source ranks
-- evaluation diagnostics
-
-but this should not be exposed to normal users by default.
-
-## 19. Phase 7 Client Scope
-
-Add receipt upload and analysis.
-
-Required UX:
-
-- select/drop supported receipt
-- validate obvious file constraints client-side for fast feedback
-- upload progress
-- server validation errors
-- analysis status
-- extracted structured fields
-- extraction warnings
-- policy assessment
-- citations
-
-Client-side validation is UX only.
-
-The server remains authoritative for:
-
-- media type
-- file size
-- authorization
-- extraction schema
-- policy decision support
-
-## 20. Phase 8 Client Scope
-
-No significant business UI change is required.
-
-MCP is internal architecture between Agent and Core capabilities.
-
-The user should not need to understand whether the agent called:
-
-    custom HTTP tool
-
-or:
-
-    MCP tool
-
-That is an internal integration concern.
-
-## 21. Phase 9 Client Security Hardening
-
-The client participates in LLM application security.
-
-Required:
-
-### Safe rendering
-
-Treat AI output as untrusted.
-
-- never render model HTML with unsafe raw HTML APIs
-- sanitize any supported Markdown extensions
-- validate URLs before rendering active links
-- do not execute generated JavaScript
-- do not map free-form AI output directly to browser actions
-
-### Sensitive information
-
-Do not expose:
-
-- access token
-- refresh token
-- system prompts
-- hidden retrieval context
-- internal tool credentials
-- unnecessary sensitive claim fields
-
-### Citation UX
-
-Citations must be visibly associated with claims in the answer.
-
-A citation click should use trusted source metadata, not a model-generated arbitrary URL.
-
-### Refusals and uncertainty
-
-The UI must clearly render:
-
-- insufficient evidence
-- authorization denial
-- model uncertainty
-- system failure
-
-Do not convert these into confident-looking answers.
-
-## 22. Phase 10 Client Security Hardening
-
-The client becomes part of human-agent control.
-
-When the Agent proposes a consequential write such as:
-
-    submit_expense_claim
-
-the UI must show an explicit confirmation step.
-
-Example:
-
-    Submit expense claim?
-
-    Claim: #123
-    Total: 450 USD
-    Action: Submit for manager review
-
-    [Cancel] [Confirm Submit]
-
-Requirements:
-
-- action details come from trusted structured runtime data
-- confirmation is bound to a specific pending action
-- confirmation expires
-- user may cancel
-- repeated clicks must not create duplicate execution
-- client must not claim success until Core API confirms success
-
-Do not use vague confirmation text such as:
-
-    "Continue?"
-
-## 23. AI Streaming
-
-Use Server-Sent Events or HTTP streaming through a same-origin Next.js route.
-
-Flow:
+Preferred flow:
 
     Browser
       |
+      | fetch/SSE request
       v
-    Next.js /api/assistant/stream
+    /api/ai/assistant/stream
       |
       v
-    AI Service streaming endpoint
+    AI Service
 
-The browser must be able to cancel the request.
+The browser must support:
 
-Cancellation should propagate downstream where practical.
+- AbortController cancellation
+- reconnect only when safe
+- explicit completed/error state
+- incremental text rendering
+- structured events for citations and tool activity
 
-Do not use WebSockets unless a later requirement needs bidirectional persistent communication.
+Do not retry write/tool streams automatically.
 
-## 24. Error Handling
+## 16. Receipt UX
 
-The client must map stable backend error codes into user-facing messages.
+From Phase 7:
 
-Example:
+- client-side file size/type pre-check for early feedback
+- backend remains authoritative validator
+- upload progress
+- preview when safe
+- processing state
+- extracted fields shown separately from claim-authoritative fields
+- uncertain fields visually identified
+- user verification before copying extracted data into a claim
 
-    CLAIM_NOT_FOUND
-       ->
-    "This expense claim could not be found."
+## 17. Consequential Agent Actions
 
-Do not expose:
+From Phase 8 onward, an AI response may propose a business action.
 
-- Python stack traces
-- SQL errors
-- internal service hostnames
-- JWT validation internals
-- raw LLM provider errors
+The frontend must separate:
 
-Keep detailed diagnostics in backend observability.
+    model proposal
+        !=
+    executable action
 
-## 25. Accessibility
+For a consequential action such as submit:
 
-Minimum target:
+1. receive structured proposed action
+2. display exact target and effect
+3. request explicit user confirmation
+4. send the confirmation to trusted backend runtime
+5. backend re-authorizes
+6. execute
+7. display authoritative result
 
-    WCAG 2.2 AA for core workflows
+Never infer confirmation from unrelated chat text.
 
-Required basics:
+## 18. Front-end Security
 
-- semantic form labels
-- keyboard accessibility
+Required throughout applicable phases:
+
+- no secrets in source or generated bundle
+- no bearer/refresh token in persistent browser storage
+- safe Markdown/HTML handling
+- CSP-compatible implementation
+- no model-generated script execution
+- no arbitrary URL navigation from model output
+- no sensitive values in analytics
+- no authorization decisions based only on hidden/disabled UI controls
+- dependency lockfile committed
+- dependency/security scanning in CI
+
+## 19. Accessibility
+
+Minimum baseline:
+
+- semantic HTML
+- keyboard-accessible forms and dialogs
 - visible focus
-- accessible error messages
-- sufficient contrast
-- buttons use meaningful labels
-- streaming status is announced appropriately
+- labels for form inputs
+- accessible validation errors
+- no color-only status meaning
+- confirmation dialogs trap and restore focus correctly
+- streaming answer updates do not continuously disrupt screen readers
 
-Accessibility is part of enterprise client quality, not optional polish.
+## 20. Observability
 
-## 26. Responsive Design
+Client requests should propagate or surface correlation IDs where supported.
 
-The web client must support:
+Track browser-safe telemetry such as:
 
-- desktop
-- tablet
-- mobile
+- route
+- request duration
+- request failure code
+- frontend exception
+- stream cancellation
+- upload failure
+- confirmation accepted/cancelled
 
-Design is mobile-friendly but desktop remains important because manager and Finance review workflows are enterprise tasks.
+Do not capture:
 
-Avoid separate mobile and desktop applications.
+- passwords
+- access tokens
+- refresh tokens
+- receipt bytes
+- full AI prompts
+- sensitive claim data by default
 
-## 27. UI Design Principle
+## 21. Testing Strategy
 
-UI should be functional and minimal.
+Component tests:
 
-The project is not a design-system exercise.
+    Vitest
+    React Testing Library
 
-Do not add a large component framework solely for aesthetics.
-
-Reusable local components are enough:
-
-    Button
-    Input
-    Select
-    FormField
-    Alert
-    Dialog
-    ClaimStatus
-    Citation
-    ReceiptUpload
-
-## 28. Testing
-
-### Unit/component
-
-Use:
-
-- Vitest
-- React Testing Library
-
-Required for:
-
-- form behavior
-- error mapping
-- confirmation behavior
-- safe rendering
-- permission-based presentation
-
-### End-to-end
-
-Use:
+End-to-end tests:
 
     Playwright
 
-Critical flows:
+Quality checks:
 
-1. Login
-2. Create draft claim
-3. Submit claim
-4. Manager review
-5. Finance reimbursement
-6. Ask policy question
-7. View citations
-8. Upload and analyze receipt
-9. Agent proposes submit
-10. User confirms/cancels submit
+    TypeScript strict typecheck
+    Biome check
+    production build
 
-E2E tests must not substitute for backend authorization tests.
+Minimum CI:
 
-## 29. Client Observability
+    pnpm install --frozen-lockfile
+    pnpm typecheck
+    pnpm check
+    pnpm test
+    pnpm build
 
-Propagate:
+Run Playwright for the phase-critical browser flows.
 
-- request ID
-- W3C trace context where supported
+## 22. Phase Evolution
 
-Capture:
-
-- client-visible request failures
-- AI streaming failure
-- upload failure
-- unexpected UI exceptions
-
-Do not send sensitive form values or AI context indiscriminately to frontend analytics.
-
-## 30. Client Project Structure
-
-Recommended structure:
-
-    apps/web/
-    ├── app/
-    │   ├── login/
-    │   ├── claims/
-    │   ├── assistant/
-    │   └── api/
-    │       ├── auth/
-    │       ├── claims/
-    │       └── assistant/
-    │
-    ├── src/
-    │   ├── components/
-    │   ├── generated/
-    │   ├── server/
-    │   │   ├── api/
-    │   │   ├── auth/
-    │   │   └── observability/
-    │   └── client/
-    │
-    ├── tests/
-    ├── e2e/
-    ├── package.json
-    └── tsconfig.json
-
-Avoid deep architecture layers in the frontend unless complexity actually appears.
-
-## 31. Client Technology Stack
-
-Baseline:
-
-| Area | Technology |
+| Phase | Front-end Capability Added |
 |---|---|
-| Runtime | Node.js 24 LTS |
-| Framework | Next.js 16.3.x Active LTS |
-| UI runtime | React 19.3 |
-| Language | TypeScript 5.x |
-| Routing | Next.js App Router |
-| Browser/backend boundary | Next.js Route Handlers thin BFF |
-| API contracts | OpenAPI-generated TypeScript |
-| API client | openapi-fetch/native fetch |
-| Styling | CSS Modules / modern CSS |
-| State | React built-ins; no global state library by default |
-| Streaming | SSE / Fetch streaming |
-| Component tests | Vitest + React Testing Library |
-| E2E | Playwright |
-| Package manager | pnpm |
-| Telemetry | OpenTelemetry-compatible server instrumentation |
+| 1 | Minimal React shell, claim list/create/detail/edit and workflow actions |
+| 2 | Login/session bootstrap, role-aware UX, protected routes, auth failure handling |
+| 3 | Policy Q&A page with structured citations |
+| 4 | Request/trace diagnostics and quality metadata for development |
+| 5 | Unified agent assistant, streaming, tool/evidence activity |
+| 6 | Retrieval strategy and reranking diagnostics behind a development flag |
+| 7 | Receipt upload, preview, extraction, uncertainty and policy assessment |
+| 8 | MCP-backed agent actions, draft creation and explicit submit confirmation |
+| 9 | LLM-output rendering hardening and browser security regression tests |
+| 10 | Agent-action policy UX, confirmation integrity, denial/termination states |
 
-Exact versions must be locked.
+Each phase-specific document defines the exact UI scope and acceptance criteria.
 
-## 32. Client Security Invariants
+## 23. Front-end Non-Goals
 
-### CLIENT-INV-01
+Do not add unless a later requirement justifies them:
 
-Access and refresh tokens are never stored in JavaScript-readable persistent browser storage.
+- SSR
+- React Server Components
+- a Node.js production BFF
+- micro-frontends
+- Redux
+- design-system monorepo
+- WebSockets when SSE/fetch streaming is sufficient
+- offline-first synchronization
+- PWA behavior
+- real-time collaborative editing
+- generic admin portal
+- generic workflow builder
 
-### CLIENT-INV-02
+## 24. Definition of Done
 
-The UI is never an authorization boundary.
+The client architecture is correctly followed when:
 
-### CLIENT-INV-03
-
-The BFF contains no duplicated expense business logic.
-
-### CLIENT-INV-04
-
-AI output is treated as untrusted content.
-
-### CLIENT-INV-05
-
-Model-generated text cannot directly execute browser or backend actions.
-
-### CLIENT-INV-06
-
-Consequential Agent writes require explicit trusted UI confirmation.
-
-### CLIENT-INV-07
-
-Browser code does not know internal database or MCP topology.
-
-### CLIENT-INV-08
-
-Generated OpenAPI contracts are not manually edited.
-
-### CLIENT-INV-09
-
-The client does not expose raw credentials, hidden prompts, or unrestricted retrieved context.
-
-### CLIENT-INV-10
-
-Backend success is the source of truth for whether a business action completed.
-
-## 33. Definition of Done
-
-The ExpenseFlow client is correctly designed when it remains a thin, secure presentation layer while the backend evolves from traditional APIs to RAG, Agents, MCP, and GenAI security.
-
-The desired boundary is:
-
-    User Interaction
-       |
-       v
-    Next.js Presentation + Thin BFF
-       |
-       v
-    Auth / Core / AI Services
-       |
-       v
-    authoritative business and security decisions
-
-The browser helps the user operate ExpenseFlow. It does not become a second backend.
+- the production frontend is a statically buildable React application
+- Rsbuild/Rspack is the supported build path
+- TypeScript runs in strict mode
+- browser-facing API paths are deployment-stable
+- frontend code does not duplicate backend business or authorization rules
+- authentication tokens follow the memory + HttpOnly refresh-cookie model
+- generated API contracts reduce schema drift
+- AI output is rendered as untrusted content
+- consequential agent actions require explicit confirmation
+- every phase introduces only the minimum UI needed to demonstrate that phase
