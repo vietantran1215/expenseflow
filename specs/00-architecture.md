@@ -902,6 +902,7 @@ Applications may run directly on the host during active development.
 Example:
 
     Developer Machine
+    ├── web (Rsbuild dev server)
     ├── core-api
     ├── auth-api
     ├── ai-api
@@ -921,6 +922,7 @@ Every service must be independently containerizable.
 
 Deployable units:
 
+- web static assets
 - core-api
 - auth-api
 - ai-api
@@ -941,6 +943,9 @@ Application code must not depend on Kubernetes-specific APIs.
 Target structure as capabilities appear:
 
     expenseflow/
+    ├── apps/
+    │   └── web/
+    │
     ├── services/
     │   ├── core-api/
     │   ├── auth-api/
@@ -991,16 +996,16 @@ Shared code must not erase ownership.
 
 | Phase | Architecture Delta |
 |---|---|
-| 1 | Core API + PostgreSQL |
-| 2 | Auth Service + JWT/JWKS + resource authorization |
-| 3 | AI Service + policy ingestion + pgvector |
-| 4 | RAG evaluation + OpenTelemetry observability |
-| 5 | Bounded agent runtime + internal tools |
-| 6 | Adaptive retrieval + lexical retrieval + reranking |
-| 7 | Object storage + multimodal receipt processing |
-| 8 | MCP Server between Agent and Core capability surface |
-| 9 | LLM security controls + adversarial regression suite |
-| 10 | Agent runtime policy guard + confirmations + agentic security tests |
+| 1 | Core API + PostgreSQL + minimal React/Rsbuild claim UI |
+| 2 | Auth Service + JWT/JWKS + resource authorization + browser session UX |
+| 3 | AI Service + policy ingestion + pgvector + policy Q&A/citation UI |
+| 4 | RAG evaluation + OpenTelemetry observability + client diagnostics |
+| 5 | Bounded agent runtime + internal tools + streaming assistant UI |
+| 6 | Adaptive retrieval + lexical retrieval + reranking + retrieval diagnostics |
+| 7 | Object storage + multimodal receipt processing + upload/analysis UI |
+| 8 | MCP Server between Agent and Core capability surface + confirmed agent writes |
+| 9 | LLM security controls + adversarial regression suite + browser output hardening |
+| 10 | Agent runtime policy guard + confirmations + agentic security tests + termination UX |
 
 Every phase should modify the smallest practical part of the architecture.
 
@@ -1075,36 +1080,46 @@ If the last question has no answer, the component probably does not belong in th
 
 ## 40. Web Client Boundary
 
-The supported browser client is a Next.js web application under:
+The supported browser client is a React + TypeScript single-page application under:
 
     apps/web/
 
-It is a presentation layer plus a thin Backend-for-Frontend boundary.
+The build pipeline is Rust-based through Rsbuild + Rspack.
+
+The application is a presentation layer only.
 
 Browser flow:
 
     Browser
       |
-      | same-origin request
+      | same-origin HTTPS
       v
-    Next.js Web + Route Handlers
+    Static React SPA
+      |
+      | /api/*
+      v
+    Reverse Proxy / API Entry
       |
       +--> Auth Service
       +--> Core API
       +--> AI Service
 
+Local development uses the Rsbuild development-server proxy to reproduce the same browser-facing paths.
+
 Client rules:
 
 - browser JavaScript must not store bearer or refresh tokens in persistent browser storage
-- Route Handlers may hold HttpOnly cookie session credentials and forward bearer identity server-side
-- Next.js must not duplicate Core business rules
+- from Phase 2, access tokens remain in memory and refresh tokens remain Secure/HttpOnly cookies
+- the frontend must not duplicate Core business rules
 - frontend role checks are user-experience controls only, never authorization
 - Core and AI Services remain independently protected
 - generated OpenAPI contracts should be used to reduce API-type drift
 - AI output is untrusted and must be rendered safely
-- consequential agent writes require explicit client confirmation as specified in Phase 10
+- model-generated content cannot directly execute browser or backend actions
+- consequential agent writes require explicit client confirmation
+- the production frontend must be statically buildable and must not require a Node.js application server
 
-The web client is optional in Phase 1 to preserve the minimum-code learning objective and becomes a first-class deployable application from Phase 2.
+The web client begins in Phase 1 with the minimum claim-management UI and evolves incrementally with each phase.
 
 Detailed client rules are defined in:
 
