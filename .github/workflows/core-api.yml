@@ -53,4 +53,10 @@ jobs:
       - run: uv run alembic upgrade head
       - run: uv run ruff check .
       - run: uv run mypy app
+      - name: Run black-box API scenarios
+        run: |
+          uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/core-api.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          uv run python scripts/api_tests/run_all.py
       - run: uv run pytest
