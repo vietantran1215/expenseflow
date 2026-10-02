@@ -1,4 +1,4 @@
-from copy import deepcopy
+from collections.abc import Callable
 
 from common import (
     ApiClient,
