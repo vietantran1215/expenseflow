@@ -7,7 +7,6 @@ from app.claims.repository import SqlAlchemyExpenseClaimRepository
 from app.claims.service import ExpenseClaimService
 from app.db.session import get_db_session
 
-
 DbSession = Annotated[AsyncSession, Depends(get_db_session)]
 
 
