@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-Build the smallest useful Expense Reimbursement backend that still covers Level-3 FastAPI application engineering and persistence. This phase intentionally contains no authentication, AI, messaging, cache, or distributed-system concerns.
+Build the smallest useful Expense Reimbursement backend that still covers the required FastAPI application engineering and persistence concepts. This phase intentionally contains no authentication, AI, messaging, cache, or distributed-system concerns.
 
 The business domain is only **enterprise expense reimbursement**.
 
