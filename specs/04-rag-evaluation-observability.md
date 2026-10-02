@@ -341,3 +341,46 @@ Phase 4 is done when a bad RAG answer can be investigated using evidence:
        +--> latency and token usage
 
 The system is no longer evaluated by intuition alone.
+
+## Front-end Specification
+
+### Goal
+
+Keep business UX nearly unchanged while making request quality and observability diagnosable during development.
+
+### Required UI delta
+
+Add a development-only diagnostics surface available through a feature flag.
+
+It may show only structured metadata already exposed safely by the backend, such as:
+
+- request_id
+- trace_id
+- total latency
+- retrieval latency
+- generation latency
+- retrieved chunk count
+- model name/version
+- token/cost metadata when available
+- abstention/result status
+
+Do not expose hidden prompts, secrets, bearer tokens, or model chain-of-thought.
+
+### Optional route
+
+    /diagnostics
+
+This route is for learning/development and may summarize recent evaluation-run results only if the backend exposes a supported read API.
+
+Do not build a second Grafana.
+
+### Front-end acceptance criteria
+
+FE-01. A learner can correlate a browser request with backend trace/request identifiers.
+
+FE-02. Diagnostics can be disabled entirely in production configuration.
+
+FE-03. Client telemetry never records passwords, tokens, raw receipts, or complete sensitive AI context.
+
+FE-04. No new user-facing business workflow is introduced.
+
