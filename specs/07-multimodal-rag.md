@@ -336,3 +336,52 @@ Do not add:
 ## 17. Definition of Done
 
 Phase 7 is complete when ExpenseFlow can take a real receipt artifact, extract useful structured facts, retrieve the applicable policy, and produce an evidence-backed explanation while preserving uncertainty and authorization boundaries.
+
+## Front-end Specification
+
+### Goal
+
+Add receipt upload and multimodal-analysis UX while preserving the distinction between extracted AI data and authoritative claim data.
+
+### Required claim-detail UI
+
+- receipt list
+- attach-receipt action
+- upload progress
+- processing status
+- safe image/PDF preview when supported
+- analyze-receipt action
+
+### Required analysis UI
+
+Display separately:
+
+1. extracted receipt facts
+2. extraction warnings/uncertainty
+3. retrieved policy evidence
+4. AI policy assessment
+
+Never visually merge extracted values into authoritative claim values without a user-controlled application action.
+
+### Client pre-checks
+
+For early feedback the browser may check:
+
+- selected file size
+- selected MIME/extension
+- obvious unsupported type
+
+Backend validation remains authoritative.
+
+### Front-end acceptance criteria
+
+FE-01. An authorized employee can upload a supported receipt from claim detail.
+
+FE-02. Processing status survives page refresh because it comes from the backend.
+
+FE-03. Ambiguous extracted fields are visibly marked as uncertain.
+
+FE-04. Policy citations are inspectable.
+
+FE-05. An unauthorized receipt response is handled as an authorization error, not hidden by frontend logic.
+
